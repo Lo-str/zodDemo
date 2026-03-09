@@ -1,6 +1,5 @@
 //SECTION -  Imports
 import express from "express";
-import { date } from "joi";
 import { z } from "zod";
 
 // Variables
@@ -48,10 +47,14 @@ const newUserSchema = z.object({
 
 // Random Address schema
 const randomAddressSchema = z.object({
-  location: z.object({
-    city: z.string(),
-    postcode: z.number(),
-  }),
+  results: z.array(
+    z.object({
+      location: z.object({
+        city: z.string(),
+        postcode: z.union([z.string(), z.number()]),
+      }),
+    }),
+  ),
 });
 
 // Random Login Schema
@@ -108,13 +111,13 @@ app.listen(port, () => {
 });
 
 // Minimal server
-app.get("/ping", (req, res) => {
+app.get("/ping", (_req, res) => {
   res.json({ message: "pong" });
 });
 
 //SECTION -  GET Routes. Random person route / address
 // Random person fetch
-app.get("/random-user", async (req, res) => {
+app.get("/random-user", async (_req, res) => {
   try {
     const validateData = await fetchData(api, userSchema);
 
@@ -133,14 +136,14 @@ app.get("/random-user", async (req, res) => {
 });
 
 // Random address fetch
-app.get("/random-adress", async (req, res) => {
+app.get("/random-address", async (_req, res) => {
   try {
     const validateData = await fetchData(api, randomAddressSchema);
-    const randomAdress = validateData.location;
+    const randomAddress = validateData.results[0]?.location;
 
     return res.json({
-      city: randomAdress?.city,
-      postcode: randomAdress?.postcode.toString(),
+      city: randomAddress?.city,
+      postcode: randomAddress?.postcode.toString(),
     });
   } catch (error) {
     return res.status(400).json({
@@ -150,7 +153,7 @@ app.get("/random-adress", async (req, res) => {
 });
 
 // Random Login Fetch
-app.get("/random-loging", async (require, res) => {
+app.get("/random-login", async (_req, res) => {
   try {
     const validateData = await fetchData(api, randomLoginSchema);
     const randomLogin = validateData.results[0];
@@ -182,3 +185,11 @@ app.post("/users", (req, res) => {
     res.status(400).json({ error: "Failed to create new user." });
   }
 });
+
+// curl http://localhost:3000/api/users
+// To send a POST request to a specific route with data:
+// curl -X POST -H "Content-Type: application/json" -d '{"name": "John Doe", "email": "john.doe@example.com"}' http://localhost:3000/api/users
+// To send a PUT request to update a resource:
+// curl -X PUT -H "Content-Type: application/json" -d '{"name": "Jane Smith"}' http://localhost:3000/api/users/123
+// To send a DELETE request to delete a resource:
+// curl -X DELETE http://localhost:3000/api/users/123
